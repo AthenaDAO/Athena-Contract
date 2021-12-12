@@ -258,7 +258,7 @@ contract ATNPreSale is Ownable {
   mapping(address => bool) public whiteListed1;
   mapping(address => bool) public whiteListed2;
 
-  // WhiteList1 for 1000 USD
+  // WhiteList1 for 800 USD
   function whiteList1Buyers(address[] memory _buyers, uint256 _limit1)
     external
     onlyOwner
@@ -271,7 +271,7 @@ contract ATNPreSale is Ownable {
     return true;
   }
 
-  // WhiteList2 for 2000USD
+  // WhiteList2 for 1200USD
   function whiteList2Buyers(address[] memory _buyers, uint256 _limit2)
     external
     onlyOwner
@@ -299,9 +299,9 @@ contract ATNPreSale is Ownable {
 
     DAOAddress = _DAOAddress;
 
-    limit1 = 1000;
+    limit1 = 800;
 
-    limit2 = 2000;
+    limit2 = 1200;
 
     toTalAmount = _toTalAmount;
 
