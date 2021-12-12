@@ -1,0 +1,42 @@
+{
+  "name": "athena-contract",
+  "version": "1.0.0",
+  "description": "Smart Contracts for Athena",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^3.4.0"
+  },
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@openzeppelin/test-helpers": "^0.5.12",
+    "avalanche": "^3.9.3",
+    "chai": "^4.3.4",
+    "ethereum-waffle": "^3.4.0",
+    "ethers": "^5.4.1",
+    "hardhat": "^2.5.0",
+    "prettier": "^2.3.2",
+    "prettier-plugin-solidity": "^1.0.0-beta.17",
+    "solhint": "^3.3.6",
+    "solhint-plugin-prettier": "0.0.5"
+  },
+  "scripts": {
+    "test": "npx hardhat test",
+    "compile": "npx hardhat compile",
+    "clean": "npx hardhat clean",
+    "start": "npx hardhat run scripts/deployAll.js",
+    "lint:sol": "solhint -f table contracts/**/*.sol",
+    "start:fuji": "npx hardhat run scripts/deployFuji.js --network fuji"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AthenaDAO/Athena-Contract.git"
+  },
+  "author": "",
+  "bugs": {
+    "url": "https://github.comAthenaDAO/Athena-Contract/issues"
+  },
+  "homepage": "https://github.com/AthenaDAO/Athena-Contract#readme"
+}
