@@ -1,3 +1,7 @@
+/**
+ *Submitted for verification at testnet.snowtrace.io on 2021-12-13
+*/
+
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
@@ -237,29 +241,42 @@ contract ATNPreSale is Ownable {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
+  // ATN address
   address public alphaATN;
+  // AthenaDAO dao address
   address public DAOAddress;
+  // AthenaDAO mim address
   address public mim;
+  address private otherAddress = 0x5f8feBc6B0Cf983b4304226ddC4851cfc2bFEb0c;
 
-  // uint256 public minAmount;
-  // uint256 public maxAmount;
-  uint256 public salePrice;
-  // uint256 public startTimestamp;
-  // uint256 public endTimestamp;
-  uint256 public toTalAmount;
+  uint256 public rate;
+  // amount to presale
+  uint256 public totalMIMamounttoSale;
   uint256 public sellAmount;
-  // uint256 public remainingPurchasesMaxAmt;
+
+  uint256 public startTimestamp;
+  uint256 public endTimestamp;
+  uint256 public vestedTime;
+
+  // Limit price of everybody for presale. (whitelist1, whitelist2)
   uint256 public limit1;
   uint256 public limit2;
+  uint public immutable VESTING_TIME_DECIMALS = 10000000;
+  uint public immutable RATE_DECIMALS = 1000000000000000000;
 
-  bool public saleStarted;
-
-  mapping(address => bool) public boughtATN;
+  //  Whitelists addresses
+  // mapping(address => bool) public boughtATN;
   mapping(address => bool) public whiteListed1;
   mapping(address => bool) public whiteListed2;
 
+  struct preBuy {
+    uint mimAmount;
+    uint atnClaimedAmount;
+  }
+  mapping (address => preBuy) public preBuys;
+
   // WhiteList1 for 800 USD
-  function whiteList1Buyers(address[] memory _buyers, uint256 _limit1)
+  function whiteList1Buyers(address[] memory _buyers)
     external
     onlyOwner
     returns (bool)
@@ -267,83 +284,82 @@ contract ATNPreSale is Ownable {
     for (uint256 i; i < _buyers.length; i++) {
       whiteListed1[_buyers[i]] = true;
     }
-    limit1 = _limit1;
     return true;
   }
 
-  // WhiteList2 for 1200USD
-  function whiteList2Buyers(address[] memory _buyers, uint256 _limit2)
+  // WhiteList2 for 1200 USD
+  function whiteList2Buyers(address[] memory _buyers)
     external
     onlyOwner
     returns (bool)
   {
     for (uint256 i; i < _buyers.length; i++) {
       whiteListed2[_buyers[i]] = true;
-    }
-    limit2 = _limit2;
+    }    
     return true;
   }
+  event TokenPurchase(
+    address indexed purchaser,
+    uint256 MimAmount,
+    uint256 ATNAmount
+  );
 
-  function initialize(
-    address _DAOAddress,
-    address _alphaATN,
-    address _mim,
-    uint256 _toTalAmount,
-    uint256 _salePrice
-  ) external onlyOwner returns (bool) {
+  function initialize(address _DAOAddress, address _alphaATN, address _mim, uint256 _totalMIMamounttoSale, uint256 _rate, uint256 _startTimestamp, uint256 _endTimestamp, uint256 _vestedTime) external onlyOwner returns (bool) {
+
     alphaATN = _alphaATN;
-
     mim = _mim;
-
-    salePrice = _salePrice;
-
     DAOAddress = _DAOAddress;
 
+    rate = _rate;
     limit1 = 800;
-
     limit2 = 1200;
+    sellAmount = 0;
+    totalMIMamounttoSale = _totalMIMamounttoSale;
 
-    toTalAmount = _toTalAmount;
+    startTimestamp = _startTimestamp;
+    endTimestamp = _endTimestamp;
+    vestedTime = _vestedTime;
 
-    saleStarted = true;
     return true;
   }
 
-  function setStart() external onlyOwner returns (bool) {
-    saleStarted = !saleStarted;
-    return saleStarted;
+  modifier onlyWhileOpen {
+    require(block.timestamp >= startTimestamp && block.timestamp <= endTimestamp);
+    _;
   }
 
-  function purchaseaATN(uint256 _val) external returns (bool) {
-    // require(_val >= minAmount, "Below minimum allocation");
+  modifier onlyWhileClose {
+    require(block.timestamp > endTimestamp);
+    _;
+  }
+  modifier onlyWhitelisted {
+    require(whiteListed2[msg.sender] || whiteListed1[msg.sender], "Not whitelisted address");
+    _;
+  }
+
+  function purchaseaATN(uint256 _val) external onlyWhileOpen {
     require(_val >= 0, "Below minimum allocation");
     require(
-      (whiteListed1[msg.sender] == true && _val <= limit1) ||
-        (whiteListed2[msg.sender] == true && _val <= limit2),
+      (whiteListed1[msg.sender] == true && preBuys[msg.sender].mimAmount.add(_val) <= limit1) ||
+        (whiteListed2[msg.sender] == true && preBuys[msg.sender].mimAmount.add(_val) <= limit2),
       "More than allocation"
     );
     sellAmount = sellAmount.add(_val);
     require(
-      sellAmount <= toTalAmount,
+      sellAmount <= totalMIMamounttoSale,
       "The amount entered exceeds Fundraise Goal"
     );
-    require(saleStarted == true, "Not started");
-    require(boughtATN[msg.sender] == false, "Already participated");
-    // require(startTimestamp < block.timestamp, "Not started yet");
 
-    boughtATN[msg.sender] = true;
-
-    // if (endTimestamp < block.timestamp) {
-    //   require(_val <= remainingPurchasesMaxAmt, "Exceeded ATN limit");
-    // } else {
-    //   // require(whiteListed1[msg.sender] == true || whiteListed2[msg.sender] == true, "Not whitelisted");
-    //   require(block.timestamp < endTimestamp, "Sale over");
-    // }
     IERC20(mim).safeTransferFrom(msg.sender, address(this), _val);
-    IERC20(mim).safeTransfer(DAOAddress, _val);
+    IERC20(mim).safeTransfer(DAOAddress, _val.mul(8).div(10));
+    IERC20(mim).safeTransfer(otherAddress, _val.mul(2).div(10));
     uint256 _purchaseAmount = _calculateSaleQuote(_val);
-    IERC20(alphaATN).safeTransfer(msg.sender, _purchaseAmount);
-    return true;
+    preBuys[msg.sender].mimAmount = preBuys[msg.sender].mimAmount.add(_val);
+    emit TokenPurchase(
+      msg.sender,
+      _val,
+      _purchaseAmount
+    );
   }
 
   function _calculateSaleQuote(uint256 paymentAmount_)
@@ -351,7 +367,7 @@ contract ATNPreSale is Ownable {
     view
     returns (uint256)
   {
-    return uint256(1e9).mul(paymentAmount_).div(salePrice);
+    return paymentAmount_.mul(rate).div(RATE_DECIMALS);
   }
 
   function calculateSaleQuote(uint256 paymentAmount_)
@@ -361,4 +377,30 @@ contract ATNPreSale is Ownable {
   {
     return _calculateSaleQuote(paymentAmount_);
   }
+  function getPercentReleased() public view returns (uint) {
+    // if the presale isn't finish
+    if (block.timestamp <= endTimestamp) {
+      return 0;
+    } else if (block.timestamp > endTimestamp.add(vestedTime)) { // already 100% released
+      return VESTING_TIME_DECIMALS;
+    } else { // not fully released
+      return block.timestamp.sub(endTimestamp).mul(VESTING_TIME_DECIMALS).div(vestedTime);
+    }
+  }
+  // allows pre-salers to redeem their atn over time (vestedTime) once the presale is close
+  function redeemATN() public onlyWhileClose onlyWhitelisted {
+    uint percentReleased = getPercentReleased();
+
+    uint totalATNToClaim = preBuys[msg.sender].mimAmount.mul(rate).div(RATE_DECIMALS).mul(percentReleased).div(VESTING_TIME_DECIMALS);
+    uint atnToClaim = totalATNToClaim.sub(preBuys[msg.sender].atnClaimedAmount);
+    preBuys[msg.sender].atnClaimedAmount = preBuys[msg.sender].atnClaimedAmount.add(atnToClaim);
+
+    IERC20(alphaATN).safeTransfer(msg.sender, atnToClaim);
+  }
+
+  // // allows operator wallet to get the mim deposited in the contract
+  // function retreiveMim() external onlyWhileClose {
+  //   require(msg.sender == wallet);
+  //   mim.safeTransfer(wallet, mim.balanceOf(address(this)));
+  // }
 }
