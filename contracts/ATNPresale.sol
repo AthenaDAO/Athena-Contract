@@ -397,10 +397,4 @@ contract ATNPreSale is Ownable {
 
     IERC20(alphaATN).safeTransfer(msg.sender, atnToClaim);
   }
-
-  // // allows operator wallet to get the mim deposited in the contract
-  // function retreiveMim() external onlyWhileClose {
-  //   require(msg.sender == wallet);
-  //   mim.safeTransfer(wallet, mim.balanceOf(address(this)));
-  // }
 }
